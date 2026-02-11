@@ -18,5 +18,3 @@ public class OpPushData implements Opcode {
         );
     }
 }
-
-
