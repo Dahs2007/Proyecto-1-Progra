@@ -48,6 +48,24 @@ public class ScriptStack {
 
     @Override
     public String toString() {
-        return stack.toString();
+        StringBuilder sb = new StringBuilder("[");
+        boolean first = true;
+        for (byte[] elem : stack) {
+            if (!first) sb.append(", ");
+            first = false;
+            sb.append(bytesToHex(elem));
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    private static String bytesToHex(byte[] bytes) {
+        if (bytes == null) return "null";
+        if (bytes.length == 0) return "[]";
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 }
