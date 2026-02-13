@@ -1,15 +1,19 @@
 package interpreter;
 
+
 import opcodes.OpLiteral;
 import opcodes.OpPushData;
 import opcodes.Opcode;
+import opcodes.*;
 
 public class ScriptInterpreter {
 
     private ExecutionContext context;
+    private boolean traceEnabled;
 
     public ScriptInterpreter(ExecutionContext context) {
         this.context = context;
+        this.traceEnabled = false;
     }
 
     public ExecutionContext getContext() {
@@ -20,11 +24,31 @@ public class ScriptInterpreter {
         context.reset();
     }
 
-    /**
-     * Parse and execute a script (sequence of bytes) using a subset of Bitcoin Script
-     * supported opcodes: push-data (1..75, PUSHDATA1/2), and OP_0..OP_16 literals.
-     * Returns true if executed without failures.
-     */
+    public void setTraceEnabled(boolean enabled) {
+        this.traceEnabled = enabled;
+    }
+
+    public boolean validateResult() {
+        if (context.hasFailed()) return false;
+        if (context.getStack().isEmpty()) return false;
+        byte[] top = context.getStack().peek();
+        return !isZero(top);
+    }
+
+    private boolean isZero(byte[] value) {
+        if (value == null || value.length == 0) return true;
+        for (byte b : value) {
+            if (b != 0) return false;
+        }
+        return true;
+    }
+
+    private void trace(String opName) {
+        if (traceEnabled) {
+            System.out.println("[TRACE] " + opName + " -> Pila: " + context.getStack().toString());
+        }
+    }
+
     public boolean run(byte[] script) {
         if (script == null) return false;
         int i = 0;
@@ -82,6 +106,42 @@ public class ScriptInterpreter {
                     continue;
                 }
 
+                if (op == 0x75) { // OP_DROP
+                    new OpDrop().execute(context);
+                    trace("OP_DROP");
+                    continue;
+                }
+
+                if (op == 0x76) { // OP_DUP
+                    new OpDup().execute(context);
+                    trace("OP_DUP");
+                    continue;
+                }
+
+                if (op == 0x87) { // OP_EQUAL
+                    new OpEqual().execute(context);
+                    trace("OP_EQUAL");
+                    continue;
+                }
+
+                if (op == 0x88) { // OP_EQUALVERIFY
+                    new OpEqualVerify().execute(context);
+                    trace("OP_EQUALVERIFY");
+                    if (context.hasFailed()) return false;
+                    continue;
+                }
+
+                if (op == 0xa9) { // OP_HASH160
+                    new OpHash160().execute(context);
+                    trace("OP_HASH160");
+                    continue;
+                }
+
+                if (op == 0xac) { // OP_CHECKSIG
+                    new OpCheckSig().execute(context);
+                    trace("OP_CHECKSIG");
+                    continue;
+                }
                 // Unsupported opcode: fail the script
                 context.fail();
                 return false;
